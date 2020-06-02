@@ -21,30 +21,6 @@ font1 = pygame.font.SysFont('cambria', 15)
 font2 = pygame.font.SysFont('calibri', 14, True)
 font3 = pygame.font.SysFont('calibri', 12)
 
-def runSim():
-
-	if run.newVals:
-		if not socDistBtnSet.selected:
-			socDistBtnSet.error = True
-			return
-		else:
-			run.simulations.append(Simulation(selectNumPeople.val, selectPercentInf.val, socDistBtnSet.selectedVal, boxWidth, boxHeight))
-			# socDistBtnSet.error = False	
-				# if we do this here instead of noSocDist() and the rest, it'll only hide the error message when
-				# you click "run simulation" istead of when you choose a level of social distancing
-	
-	currentSim = run.simulations[len(run.simulations)-1]											
-	
-	for i in range(currentSim.num_moving_healthy):
-		currentSim.generateDot(GREEN, 5, 3)
-	for i in range(currentSim.num_stationary_healthy):
-		currentSim.generateDot(GREEN, 5, 3, False)
-
-	for i in range(currentSim.num_moving_inf):
-		currentSim.generateDot(RED, 5, 3)
-	for i in range(currentSim.num_stationary_inf):
-		currentSim.generateDot(RED, 5, 3, False)
-
 def redrawScreen():
 
 	# update screen
@@ -61,7 +37,8 @@ def redrawScreen():
 	win.blit(label3, (550, 210))
 
 	for button in buttons:
-		button.draw(win)
+		if button.visible:
+			button.draw(win)
 
 	if len(run.simulations) > 0:
 		currentSim = run.simulations[len(run.simulations)-1]
@@ -75,34 +52,71 @@ def redrawScreen():
 	pygame.display.update()
 
 def reset():
-	run.newVals = False
-	# clears the people array of the last simulation in the list
-	run.simulations[len(run.simulations)-1].people.clear()
-	runSim()
+	# gets rid of all past simulations (clears history)
+	run.simulations.clear()
+
+	selectNumPeople.val = 100
+	selectPercentInf.val = 5
+	pauseOrResumeBtn.text = 'Pause'
+
+	selectNumPeople.updateLabel()
+	selectPercentInf.updateLabel()
+	pauseOrResumeBtn.updateLabel()
+
+	for button in socDistBtnSet.buttons:
+		socDistBtnSet.buttonDeselected(button)
+
+	socDistBtnSet.error = False
 
 def newSim():
-	run.newVals = True
-	if len(run.simulations) > 0:
-		run.simulations[len(run.simulations)-1].people.clear()
-	runSim()
+	if not socDistBtnSet.selected:
+		socDistBtnSet.error = True
+	else:
+		# resetting the  necessary fields
+		pauseOrResumeBtn.text = 'Pause'
+		pauseOrResumeBtn.updateLabel()
+		if len(run.simulations) > 0:
+			# clears so that we don't have previous simulations running in the background 
+			run.simulations[len(run.simulations)-1].people.clear()
+
+		if not socDistBtnSet.error:
+			run.simulations.append(Simulation(selectNumPeople.val, selectPercentInf.val, socDistBtnSet.selectedVal, boxWidth, boxHeight))
+
+		currentSim = run.simulations[len(run.simulations)-1]											
+		
+		# generating the simulated people
+		for i in range(currentSim.num_moving_healthy):
+			currentSim.generateDot(GREEN, 5, 3)
+		for i in range(currentSim.num_stationary_healthy):
+			currentSim.generateDot(GREEN, 5, 3, False)
+
+		for i in range(currentSim.num_moving_inf):
+			currentSim.generateDot(RED, 5, 3)
+		for i in range(currentSim.num_stationary_inf):
+			currentSim.generateDot(RED, 5, 3, False)
 
 def noSocDist():
 	socDistBtnSet.selectedVal = 0
-	socDistBtnSet.error = False	
 
 def lowSocDist():
 	socDistBtnSet.selectedVal = 1
-	socDistBtnSet.error = False
 
 def modSocDist():
 	socDistBtnSet.selectedVal = 2
-	socDistBtnSet.error = False
 
 def highSocDist():
 	socDistBtnSet.selectedVal = 3
-	socDistBtnSet.error = False
-
-
+	
+def pauseOrResume():
+	if len(run.simulations) > 0:
+		currentSim = run.simulations[len(run.simulations)-1]
+		currentSim.paused = not currentSim.paused
+		if pauseOrResumeBtn.text == 'Pause':
+			pauseOrResumeBtn.text = 'Resume'
+		else:
+			pauseOrResumeBtn.text = 'Pause'
+		pauseOrResumeBtn.updateLabel()
+	
 run = Run()
 
 buttons = []
@@ -110,8 +124,9 @@ resetBtn = Button(580, 460, 130, 30, 'Reset Simulation', font1, (0,0,0), (211,21
 
 # would make more sense that it would says "Run Simulation" for the first one, but after that the button says
 # "Apply Changes" or something to that effect
-runSimBtn = Button(580, 400, 130, 30, 'Run Simulation', font1, (0,0,0), (211,211,211), (166,166,166), newSim)
-buttons.extend([resetBtn, runSimBtn])
+newSimBtn = Button(580, 400, 130, 30, 'Run Simulation', font1, (0,0,0), (211,211,211), (166,166,166), newSim)
+pauseOrResumeBtn = Button(520, 330, 70, 30, 'Pause', font1, (0,0,0), (211,211,211), (166,166,166), pauseOrResume)
+buttons.extend([resetBtn, newSimBtn, pauseOrResumeBtn])
 
 # Number Selectors to allow the user to choose the amount of people present, and the percentage of them who are infected
 selectNumPeople = NumberSelector(620, 90, 100, 'Select the number of people:', 0)
@@ -133,43 +148,6 @@ errorLbl = font3.render('Please select a level of social distancing', True, (255
 socDistBtnSet = ButtonSet([noSocDistBtn, lowSocDistBtn, modSocDistBtn, highSocDistBtn], 
 	noSocDistBtn.hover_color, noSocDistBtn.idle_color, select_idle_c, select_hover_c, errorLbl, (550, 290))
 
-# add the ability to deselect buttons within a ButtonSet (and check for error accordingly)
-
-'''
---------------------------------------------------------------------------------------------------------------------------------
-
-possible things to add later:
-
-	- maybe if i wanna get really fancy i can have a little timer that stops when everyone has been infected
-	  (quantify how much social distancing slows down the spread)
-
-	- could also have a timer for each person thats infected that changes them to a recovered state (dif color)
-	  in the recovered state they're now immune (can't get infected)
-	  (inspired by that washington post article with a very similar simulation lol)
-
-	- maybe add functionality so that you can pause the simulation at any time, but then you can also resume it
-	  this would mean setting all the ball object's moving var to False, but still remembering their previous value so that 
-	  it can resume where it left off
-	  oh actually can just have a boolean for if the simulation is paused or not and go from there
-
-	- could have something so that you can toggle back an forth to previous simulation runs for easy comparison
-
-	---------------
-
-	** to do next:  pause functionality
-					- have a pause button that changes to unpause when paused and vice versa
-					- have a "Clear" button to clear screen
-					- make sure to pause the ones in the background (the old simulations)
-
---------------------------------------------------------------------------------------------------------------------------------
-'''
-
-
-# uncomment these if you want it to start running right out of the gate
-# sim = Simulation(100, 5, 2, boxWidth, boxHeight)
-# run.simulations.append(sim)
-# runSim()
-
 clock = pygame.time.Clock()
 while run.running:
 
@@ -188,7 +166,6 @@ while run.running:
 			button.get_event(event)
 
 		socDistBtnSet.get_event(event)
-
 
 	redrawScreen()
 	clock.tick(100)
