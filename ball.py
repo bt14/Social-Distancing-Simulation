@@ -11,7 +11,7 @@ class Ball():
 		self.y = y
 		self.radius = radius
 		self.color = color
-		self.angle = angle	# in radians
+		self.angle = angle	# radians
 		self.speed = speed
 		self.moving = moving
 
