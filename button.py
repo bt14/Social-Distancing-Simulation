@@ -1,8 +1,10 @@
 import pygame
 
+# this file contains the Button and ButtonSet classes
+
 class Button:
 
-	def __init__ (self, x, y, width, height, text, font, text_color, idle_color, hover_color, callback_funct):
+	def __init__ (self, x, y, width, height, text, font, text_color, idle_color, hover_color, callback_funct, visible=True):
 		self.x = x
 		self.y = y
 		self.width = width
@@ -10,8 +12,9 @@ class Button:
 		self.rect = pygame.Rect(x, y, width, height)
 
 		self.text = text
-		self.label = font.render(text, True, text_color)
-		self.label_rect = self.label.get_rect(center=self.rect.center)
+		self.font = font
+		self.text_color = text_color
+		self.updateLabel()
 
 		self.idle_color = idle_color
 		self.hover_color = hover_color
@@ -19,6 +22,7 @@ class Button:
 		self.hovered = False
 		self.outlineRect = (x-1, y-1, width+2, height+2)
 		self.outlineColor = (0,0,0)  
+		self.visible = visible
 
 	def updateHover(self, mouse_pos):
 		self.hovered = False
@@ -28,10 +32,14 @@ class Button:
 	# checks if it was clicked
 	def get_event(self, event):
 		if event.type == pygame.MOUSEBUTTONUP:
-			if self.hovered:
+			if self.hovered and self.visible:
 				self.callback_funct()
 				return True
 		return False
+
+	def updateLabel(self):
+		self.label = self.font.render(self.text, True, self.text_color)
+		self.label_rect = self.label.get_rect(center=self.rect.center)
 
 	def draw(self, win):
 		if self.hovered:
@@ -66,15 +74,26 @@ class ButtonSet:
 		for button in self.buttons:
 			button.draw(win)
 
-
 	def get_event(self, event):
 		for button in self.buttons:
 			clicked = button.get_event(event)
 			if clicked:
-				button.idle_color = self.select_idle_c
-				button.hover_color = self.select_hover_c
-				self.selected = True
-				for button2 in self.buttons:
-					if button2 != button:
-						button2.idle_color = self.normal_idle_c
-						button2.hover_color = self.normal_hover_c
+				if button.idle_color == self.normal_idle_c:
+					self.buttonSelected(button)
+				else:
+					self.buttonDeselected(button)
+
+	def buttonSelected(self, button):
+		self.selected = True
+		self.error = False
+		button.idle_color = self.select_idle_c
+		button.hover_color = self.select_hover_c
+		for button2 in self.buttons:
+			if button2 != button:
+				button2.idle_color = self.normal_idle_c
+				button2.hover_color = self.normal_hover_c
+
+	def buttonDeselected(self, button):
+		self.selected = False
+		button.idle_color = self.normal_idle_c
+		button.hover_color = self.normal_hover_c
