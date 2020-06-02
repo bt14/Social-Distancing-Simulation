@@ -3,6 +3,8 @@ import pygame
 import random
 import math
 
+# this file contains the Simulation and Run classes
+
 # percentage of people that are stationary based on
 # the amount of social distancing
 stationary_percent = [0, 0.2, 0.7, 0.9]
@@ -19,6 +21,7 @@ class Simulation():
 		self.people = []
 		self.width = width
 		self.height = height
+		self.paused = False
 
 		self.num_infected = num_people * percent_infected / 100
 		self.num_healthy = num_people - self.num_infected
@@ -91,9 +94,7 @@ class Simulation():
 			elif ball2.color is RED and ball1.color is GREEN:
 				ball1.color = RED
 
-
 class Run():
 	def __init__(self):
 		self.simulations = []
-		self.newVals = False
 		self.running = True
